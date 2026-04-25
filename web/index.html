@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous SRE Swarm</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            background: radial-gradient(circle at top right, #0f172a, #020617); 
+            color: #f8fafc; 
+            margin: 0; 
+            padding: 30px; 
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1600px; 
+            margin: 0 auto; 
+            display: grid; 
+            grid-template-columns: 1fr 2fr; 
+            gap: 30px; 
+        }
+        .panel { 
+            background: rgba(30, 41, 59, 0.4); 
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 25px; 
+            border-radius: 16px; 
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5); 
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        .button-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        h1, h2 { 
+            color: #38bdf8; 
+            margin-top: 0; 
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+        
+        button { 
+            background: linear-gradient(135deg, #0284c7, #0369a1); 
+            color: white; 
+            border: 1px solid rgba(255,255,255,0.1); 
+            padding: 12px 20px; 
+            margin: 8px 0; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            width: 100%; 
+            font-weight: 600; 
+            font-family: 'Outfit', sans-serif;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        button::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 50%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.2), transparent);
+            transform: skewX(-20deg);
+            transition: 0.5s;
+        }
+        button:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 15px rgba(2, 132, 199, 0.3); 
+        }
+        button:hover::after {
+            left: 150%;
+        }
+        
+        .danger { background: linear-gradient(135deg, #e11d48, #be123c); }
+        .danger:hover { box-shadow: 0 8px 15px rgba(225, 29, 72, 0.3); }
+        .warning { background: linear-gradient(135deg, #d97706, #b45309); }
+        .warning:hover { box-shadow: 0 8px 15px rgba(217, 119, 6, 0.3); }
+        
+        #log-container { 
+            height: 700px; 
+            overflow-y: auto; 
+            font-family: 'Fira Code', monospace; 
+            background: rgba(2, 6, 23, 0.7); 
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 1px solid rgba(56, 189, 248, 0.1); 
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            scroll-behavior: smooth;
+        }
+        
+        /* Custom Scrollbar */
+        #log-container::-webkit-scrollbar { width: 8px; }
+        #log-container::-webkit-scrollbar-track { background: transparent; }
+        #log-container::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        #log-container::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .log-entry { 
+            margin-bottom: 12px; 
+            line-height: 1.5; 
+            font-size: 0.9em;
+            opacity: 0;
+            transform: translateX(-10px);
+            animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border-left: 3px solid transparent;
+        }
+        
+        @keyframes slideIn {
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .transaction-form {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #94a3b8;
+            font-size: 0.9em;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: white;
+            font-size: 1em;
+        }
+        .pulse-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4);
+            animation: pulse 2s infinite;
+        }
+        .intro-section {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeIn 1s ease-out;
+        }
+        .intro-section h1 {
+            font-size: 3em;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        .intro-section p {
+            color: #94a3b8;
+            font-size: 1.2em;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .console-box {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .console-header {
+            background: rgba(56, 189, 248, 0.2);
+            padding: 8px 15px;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: #38bdf8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .console-body {
+            height: 350px;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(56, 189, 248, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .agent-triage { color: #c084fc; border-left-color: #c084fc; background: rgba(192, 132, 252, 0.05); }
+        .agent-healer { color: #4ade80; border-left-color: #4ade80; background: rgba(74, 222, 128, 0.05); }
+        .tool-exec { color: #facc15; border-left-color: #facc15; background: rgba(250, 204, 21, 0.05); }
+        .info { color: #94a3b8; }
+        .danger-log { color: #f87171; border-left-color: #f87171; }
+        .subtitle {
+            color: #94a3b8;
+            font-size: 1.2em;
+            margin-top: -5px;
+            margin-bottom: 25px;
+        }
+        .features-grid {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .feature-badge {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #bae6fd;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        
+        /* Mermaid Diagram Enhancements */
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 500px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 30px;
+        }
+        .mermaid svg {
+            max-width: 100% !important;
+            height: auto !important;
+            font-family: 'Outfit', sans-serif !important;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme: 'dark', flowchart: { curve: 'basis' }});</script>
+</head>
+<body>
+    <div class="intro-section">
+        <h1>Autonomous SRE Swarm</h1>
+        <p class="subtitle">Mission-Critical Payment Gateway Resolution Platform</p>
+        <div class="features-grid">
+            <div class="feature-badge">⚡️ Autonomous Discovery</div>
+            <div class="feature-badge">🧠 Policy-Grounded (Second Brain)</div>
+            <div class="feature-badge">🛡️ High-Value SLA Enforcement</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Controls Panel -->
+        <div class="panel">
+            <h2>Transaction Injector</h2>
+            <div class="transaction-form">
+                <div class="form-group">
+                    <label>Transaction Amount (£ GBP)</label>
+                    <input type="number" id="tx-amount" value="12500" placeholder="Enter amount...">
+                </div>
+                <div class="form-group">
+                    <label>Execution Date</label>
+                    <input type="date" id="tx-date">
+                </div>
+                <div class="form-group">
+                    <label>Primary Telemetry Signal (Narrative Control)</label>
+                    <select id="tx-signal" style="width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: white; margin-top: 10px; cursor: pointer;">
+                        <option value="OOM_KILL">Alert: OOMKilled (System Failure)</option>
+                        <option value="DEADLOCK">Alert: MySQL Deadlock (System Failure)</option>
+                        <option value="P99_SPIKE">Alert: P99 Latency Spike (System Failure)</option>
+                        <option value="AML_FLAG">Alert: AML Sanctions Match (Compliance)</option>
+                    </select>
+                </div>
+                
+                <button class="pulse-button" onclick="initiateAutonomousSwarm()">
+                    Initiate Autonomous Swarm
+                </button>
+            </div>
+            
+            <!-- Swarm Console -->
+            <div class="console-box" style="margin-top: 20px;">
+                <div class="console-header">Swarm Orchestrator Logs</div>
+                <div id="log-container" class="console-body">
+                    <div class="info">Awaiting transaction...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Diagram -->
+        <div class="panel">
+            <h2>Swarm Decision Logic (Second Brain Rules)</h2>
+            <div class="mermaid">
+flowchart TD
+    classDef start fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#fff;
+    classDef ai fill:#0f172a,stroke:#818cf8,stroke-width:2px,color:#bae6fd;
+    classDef kb fill:#020617,stroke:#10b981,stroke-width:2px,color:#a7f3d0;
+    classDef heal fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#fff;
+    classDef human fill:#7f1d1d,stroke:#f87171,stroke-width:2px,color:#fff;
+
+    Start([Incoming Telemetry]):::start --> Triage{Incident_Commander<br/>Agent}:::ai
+    Triage -->|RAG Query| SB[(System & Compliance<br/>Rulebooks)]:::kb
+    SB -.->|OOM_KILL / P99_SPIKE| Healer[Auto_Remediator:<br/>Restart Service]:::heal
+    SB -.->|DEADLOCK| Backoff[Resilience_Engineer:<br/>Exponential Retry]:::ai
+    SB -.->|Weekend or >£5k| HIL[Human_in_Loop:<br/>Architectural Risk]:::human
+    SB -.->|Compliance >£10k| HIL
+    SB -.->|Compliance <=£10k| Notif[Comms_Lead:<br/>FinOps Jira Ticket]:::ai
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
