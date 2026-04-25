@@ -1,8 +1,8 @@
-# 🚨 SRE Swarm — AI Agents That Fix Your Infrastructure
+# 🚨 PaymentGuard — Autonomous AI Agents for Payment Infrastructure
 
 > _What if your on-call engineer was an AI that never sleeps, reads every runbook instantly, and coordinates a team of specialists in seconds?_
 
-**SRE Swarm** is a live demo of exactly that. It's a team of AI agents — built in Go, powered by local LLMs — that detect payment system failures, look up the right fix from your company knowledge base, and either fix it automatically or escalate it to the right human. All in real-time, streamed to a slick dashboard.
+**PaymentGuard** is a live demo of exactly that. It's a team of AI agents — built in Go, powered by local LLMs — that detect payment system failures, look up the right fix from your company knowledge base, and either fix it automatically or escalate it to the right human. All in real-time, streamed to a slick dashboard.
 
 ---
 

@@ -30,7 +30,7 @@ func Init() {
 	// 2. Define Tools (Capabilities)
 	readKBTool := adklite.Tool{
 		Name:        "ReadKnowledgeBase",
-		Description: "Reads the contents of a markdown runbook. You MUST provide the exact Telemetry Signal as the argument (e.g., OOM_KILL, DEADLOCK).",
+		Description: "Reads markdown runbook. Arg = exact Telemetry Signal (OOM_KILL, DEADLOCK, P99_SPIKE, AML_FLAG).",
 		Execute: func(args string) string {
 			// Karpathy's Librarian Approach: Load markdown into context dynamically
 			// Update the relative path since we are now inside internal/agents
@@ -79,48 +79,41 @@ func Init() {
 	// Responsible for bridging the Information Vacuum using the Second Brain.
 	IncidentCommanderAgent = &adklite.Agent{
 		Role: "Incident_Commander",
-		Instructions: `You are the Incident Commander. You receive raw transaction telemetry (Amount, Date, Signal).
-STEP 1 (Discovery): Based on the transaction amount, date, and signal, brainstorm a plausible failure scenario.
-STEP 2 (Investigation): Use the ReadKnowledgeBase tool to find the relevant rulebook. You MUST pass the EXACT Telemetry Signal (e.g., OOM_KILL, DEADLOCK) to the tool. Do NOT guess error codes.
-STEP 3 (Resolution): Decide the path strictly based on the rulebook findings.
-You MUST output your final decision in exactly one of these formats:
-1. "HANDOFF: Auto_Remediator | <reason>"
-2. "HANDOFF: Human_in_Loop | <reason>"
-3. "HANDOFF: Comms_Lead | <reason>"
-4. "HANDOFF: Resilience_Engineer | <reason>"`,
+		Instructions: `Role: Incident Commander. Input: Amount, Date, Signal.
+1. Call ReadKnowledgeBase with EXACT Signal (OOM_KILL, DEADLOCK, P99_SPIKE, AML_FLAG). No guessing.
+2. Follow rulebook protocol exactly.
+3. Output ONE line, exact format:
+"HANDOFF: Auto_Remediator | reason"
+"HANDOFF: Human_in_Loop | reason"
+"HANDOFF: Comms_Lead | reason"
+"HANDOFF: Resilience_Engineer | reason"`,
 		Tools:     []adklite.Tool{readKBTool},
 		ModelHost: modelHost,
 		ModelName: modelName,
 	}
 
-	// Auto Remediator Agent
-	// Responsible for asynchronous infrastructure remediation.
+	// Auto Remediator — restarts crashed services
 	AutoRemediatorAgent = &adklite.Agent{
 		Role: "Auto_Remediator",
-		Instructions: `You are the Auto Remediator agent. You resolve infrastructure issues autonomously without human intervention.
-Use the RestartKubernetesPod tool on the service name provided to you. Return a success message when done.`,
+		Instructions: `Role: Auto Remediator. Call RestartKubernetesPod with given service name. Return result.`,
 		Tools:     []adklite.Tool{restartK8sTool},
 		ModelHost: modelHost,
 		ModelName: modelName,
 	}
 
-	// Comms Lead Agent
-	// Responsible for outward communications.
+	// Comms Lead — alerts humans
 	CommsLeadAgent = &adklite.Agent{
 		Role: "Comms_Lead",
-		Instructions: `You are the Comms Lead. You receive handoffs from the Incident Commander when a team must be notified.
-You must use the SendSlackAlert tool to notify the relevant team.`,
+		Instructions: `Role: Comms Lead. Call SendSlackAlert with given message. Return result.`,
 		Tools:     []adklite.Tool{sendSlackAlertTool},
 		ModelHost: modelHost,
 		ModelName: modelName,
 	}
 
-	// Resilience Engineer Agent
-	// Responsible for orchestrating retries
+	// Resilience Engineer — handles deadlock retries
 	ResilienceEngineerAgent = &adklite.Agent{
 		Role: "Resilience_Engineer",
-		Instructions: `You are the Resilience Engineer. You handle transactional deadlocks by executing exponential backoffs.
-You MUST use the ExecuteExponentialBackoff tool to simulate resolving the transaction block, and return the result.`,
+		Instructions: `Role: Resilience Engineer. Call ExecuteExponentialBackoff. Return result.`,
 		Tools:     []adklite.Tool{executeExponentialBackoffTool},
 		ModelHost: modelHost,
 		ModelName: modelName,
