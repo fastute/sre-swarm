@@ -8,18 +8,20 @@
 
 ## 🧠 Meet the Agents
 
-| Agent | Role |
-| :--- | :--- |
-| **Incident Commander** | The brain. Reads incoming alerts, consults the rulebooks, and decides what happens next. |
-| **Auto Remediator** | The hands. Restarts crashed services without waiting for a human. |
-| **Resilience Engineer** | The strategist. Handles tricky problems like database deadlocks using smart retry logic. |
-| **Comms Lead** | The messenger. Alerts humans via Slack or Jira when the AI can't (or shouldn't) act alone. |
+Think of each agent as a virtual employee with a specific job:
+
+| Agent | Role | Real-World Analogy |
+| :--- | :--- | :--- |
+| **Incident Commander** | The brain. Reads incoming alerts, looks up the rulebook, and decides what happens next. | A hospital triage nurse |
+| **Auto Remediator** | The fixer. Restarts crashed services without waiting for a human. | IT helpdesk rebooting a frozen computer |
+| **Resilience Engineer** | The strategist. Handles tricky problems like database deadlocks using smart retry logic. | A surgeon who needs a careful approach |
+| **Comms Lead** | The messenger. Alerts humans via Slack or Jira when the AI can't (or shouldn't) act alone. | A receptionist paging the right doctor |
 
 ---
 
 ## 🗺️ Decision Flow
 
-This is how the agents coordinate. The **Incident Commander** reads the rulebooks, then delegates to the right specialist based on what it finds:
+When something goes wrong, the **Incident Commander** reads the rulebook and delegates to the right specialist:
 
 ```mermaid
 flowchart TD
@@ -64,13 +66,41 @@ Pick a failure scenario from the dropdown, hit **Initiate Autonomous Swarm**, an
 ## 🔧 How It Works
 
 ```
-You trigger a failure  →  Incident Commander reads the rulebook
-                          →  Decides: auto-fix? escalate? retry?
-                              →  Hands off to the right agent
-                                  →  You watch it happen live
+Alert arrives
+    → Incident Commander reads the rulebook
+        → Is it a simple crash?         → Auto Remediator fixes it
+        → Is it a database deadlock?    → Resilience Engineer retries it
+        → Is it a compliance issue?     → Comms Lead alerts a human
+        → Is it a weekend or high-value? → Human is called directly
 ```
 
-The key idea is the **knowledge base** — a folder of plain Markdown files (`knowledge/`). The AI reads these at runtime to decide what to do. Edit a rule in the Markdown and the AI's behavior changes instantly. No retraining, no redeploying.
+### The Knowledge Base (the "Rulebook")
+
+Inside the project there's a `knowledge/` folder containing simple Markdown files. These are the AI's rulebook. They contain instructions like:
+
+> *"If the alert is OOM_KILL, restart the settlement-worker service."*
+>
+> *"If the payment is over £10,000 and there's a compliance flag, a human must review it."*
+>
+> *"If the payment date falls on a weekend, defer processing to Monday."*
+
+**You can change these files at any time and the AI's behavior changes instantly.** No programming. No retraining. Just edit the text.
+
+### What is a "Handoff"?
+
+When one agent finishes its job and passes the work to another, that's a handoff. For example, the Incident Commander hands off to the Auto Remediator to restart a crashed service. Every handoff is logged in the dashboard so you can see exactly what happened and why.
+
+---
+
+## 🖥️ What You See on the Dashboard
+
+| Area | What it shows |
+| :--- | :--- |
+| **Transaction Injector** (left) | Where you simulate a problem — set the amount, date, and alert type |
+| **Decision Banner** | A color-coded card showing the final outcome (🟢 fixed, 🔴 escalated, 🟣 notified) |
+| **Swarm Logs** | A live feed of the AI thinking, looking up rulebooks, and executing fixes |
+| **Show Thinking toggle** | Check/uncheck to show or hide the AI's internal reasoning |
+| **Decision Flow Diagram** (right) | A visual map of all the paths the AI can take |
 
 ---
 
@@ -94,24 +124,48 @@ The key idea is the **knowledge base** — a folder of plain Markdown files (`kn
 Most AI agent demos are slow Python scripts calling cloud APIs. This one is different:
 
 - **100% local** — runs on your machine with Ollama. No API keys, no cloud bills.
-- **Fast** — written in Go. Talks directly to Ollama over HTTP.
+- **Fast** — written in Go. Talks directly to the AI model over HTTP.
 - **Realistic** — models real payment failures (crashes, deadlocks, compliance flags).
 - **Easy to customize** — edit a Markdown file to change how the AI makes decisions.
+- **Safe by design** — high-value and compliance issues always get escalated to a human.
 
 ---
 
-## 📚 Key Concepts & References
+## 📚 Key Concepts
 
-This project draws on two ideas:
+### What is an "AI Agent"?
+A virtual employee that can **read** (look up documentation), **think** (analyze a situation), and **act** (execute a fix or send a message). PaymentGuard uses four agents working together as a coordinated team.
 
-- **Karpathy's Second Brain / Librarian Pattern** — Instead of fine-tuning, the AI dynamically loads relevant Markdown documents into its context at query time. This makes the system easy to update and fully transparent.  
-  → [Karpathy's Instructions for Building an AI-Driven Second Brain](https://techstrong.ai/features/karpathys-instructions-for-building-an-ai-driven-second-brain/)
+### What is a "Model"?
+The AI brain powering the agents. We use **Gemma 4** by Google, running entirely on your own computer via a tool called **Ollama**. Your data never leaves your machine.
 
-- **CaVEMan Protocol** — Agent prompts are written in terse, abbreviated "caveman" style to minimize token count and maximize inference speed on local models.  
-  → [CaVEMan on GitHub](https://github.com/cancerit/CaVEMan)
+### What is the "Second Brain" / Librarian Pattern?
+Instead of teaching the AI everything upfront, we give it access to a library of documents. When a problem occurs, the AI looks up the relevant document and follows the instructions.  
+→ [Karpathy's AI-Driven Second Brain](https://techstrong.ai/features/karpathys-instructions-for-building-an-ai-driven-second-brain/)
+
+### What is "Caveman Protocol"?
+We talk to the AI using as few words as possible. Fewer words = faster responses. Instead of *"You are the Auto Remediator agent. You resolve infrastructure issues autonomously..."* we say *"Role: Auto Remediator. Call RestartKubernetesPod. Return result."*  
+→ [CaVEMan on GitHub](https://github.com/cancerit/CaVEMan)
+
+---
+
+## ❓ FAQ
+
+**Can I change what the AI does without coding?**  
+Yes. Edit the Markdown files in `knowledge/`. The AI reads them fresh every time.
+
+**Does this need the internet?**  
+No. Everything runs on your local machine.
+
+**What if the AI makes a wrong decision?**  
+High-value transactions and compliance issues always get escalated to a human. The AI can only auto-fix things your rulebook explicitly marks as safe.
+
+**How fast is it?**  
+From alert to resolution, typically **5–15 seconds** depending on the scenario and your hardware.
 
 ---
 
 ## 📖 Further Reading
 
-See [`docs/user_guide.md`](docs/user_guide.md) for detailed architecture diagrams and a full walkthrough.
+- [`docs/user_guide.md`](docs/user_guide.md) — Architecture diagrams and technical walkthrough
+- [`docs/product_guide.md`](docs/product_guide.md) — Extended product guide with detailed explanations
