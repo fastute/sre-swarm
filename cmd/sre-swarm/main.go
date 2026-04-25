@@ -81,7 +81,7 @@ Primary Telemetry Signal: %s
 	msgStart := "Strategic_Triage Agent is analyzing the telemetry..."
 	broadcastLog(msgStart)
 	
-	triageResult := agents.Orchestrator.Run(agents.TriageAgent, triagePrompt, broadcastLog)
+	triageResult := agents.Orchestrator.Run(agents.IncidentCommanderAgent, triagePrompt, broadcastLog)
 
 	// Prepare a structured response for the UI
 	var response struct {
