@@ -46,7 +46,7 @@ func (s *ADKLite) Run(agent *Agent, prompt string, logCb func(string)) string {
 CRITICAL INSTRUCTION:
 You MUST format your decisions exactly as shown in these examples. DO NOT use conversational text.
 Example 1 (Tool): CALL_TOOL: ReadKnowledgeBase | PAYMENT_SETTLEMENT_FAILED
-Example 2 (Handoff): HANDOFF: Auto_Healer | payment-service
+Example 2 (Handoff): HANDOFF: Auto_Remediator | payment-service
 `
 
 	// Track conversation history for the multi-turn loop
