@@ -23,8 +23,18 @@ eventSource.onmessage = (event) => {
 
 function appendLogTo(message, type, containerId) {
     const container = document.getElementById(containerId);
+    if (!container) return;
     const div = document.createElement('div');
     div.className = `log-entry ${type}`;
+
+    // If this is a reasoning log and Show Thinking is unchecked, hide it
+    if (type === 'agent-triage') {
+        const showThinking = document.getElementById('show-thinking');
+        if (showThinking && !showThinking.checked) {
+            div.classList.add('hidden-reasoning');
+        }
+    }
+
     div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
@@ -34,8 +44,23 @@ function appendLog(message, type) {
     appendLogTo(message, type, 'log-container');
 }
 
-// Set default date to today and disallow past dates
+// Show Thinking toggle — retroactively show/hide reasoning logs
 document.addEventListener('DOMContentLoaded', () => {
+    const showThinking = document.getElementById('show-thinking');
+    if (showThinking) {
+        showThinking.addEventListener('change', () => {
+            const reasoningLogs = document.querySelectorAll('#log-container .log-entry.agent-triage');
+            reasoningLogs.forEach(el => {
+                if (showThinking.checked) {
+                    el.classList.remove('hidden-reasoning');
+                } else {
+                    el.classList.add('hidden-reasoning');
+                }
+            });
+        });
+    }
+
+    // Set default date to today and disallow past dates
     const dateInput = document.getElementById('tx-date');
     if (dateInput) {
         const today = new Date().toISOString().split('T')[0];
@@ -45,6 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 let isSwarmActive = false;
+
+function showDecisionBanner(type, icon, title, detail) {
+    const banner = document.getElementById('decision-banner');
+    banner.className = `decision-banner ${type}`;
+    banner.innerHTML = `
+        <div class="decision-icon">${icon}</div>
+        <div class="decision-title">${title}</div>
+        <div class="decision-detail">${detail}</div>
+    `;
+}
 
 async function initiateAutonomousSwarm() {
     if (isSwarmActive) {
@@ -56,16 +91,20 @@ async function initiateAutonomousSwarm() {
     const date = document.getElementById('tx-date').value;
     const signal = document.getElementById('tx-signal').value;
 
+    // Reset UI
     isSwarmActive = true;
     const logContainer = document.getElementById('log-container');
     logContainer.innerHTML = '';
+    const banner = document.getElementById('decision-banner');
+    banner.className = 'decision-banner';
+    banner.innerHTML = '';
     
     appendLog(`Transaction Initiated: <strong>£${amount} GBP</strong> on <strong>${date}</strong>`, 'info');
-    appendLog(`Narrative Mode: <strong>${signal}</strong>`, 'info');
+    appendLog(`Signal: <strong>${signal}</strong>`, 'info');
     appendLog(`Triggering Autonomous SRE Swarm...`, 'info');
 
     try {
-        appendLog(`Waking up Strategic_Triage Agent for Discovery...`, 'agent-triage');
+        appendLog(`Waking up Incident_Commander for Discovery...`, 'agent-triage');
         
         const swarmRes = await fetch('/api/simulate', {
             method: 'POST',
@@ -80,16 +119,19 @@ async function initiateAutonomousSwarm() {
         const swarmData = await swarmRes.json();
         
         if (swarmData.isAutonomous) {
-            appendLog(`🤖 <b>Autonomous Behavior Detected</b>`, 'agent-healer');
-            appendLog(`Target Execution: ${swarmData.target}`, 'tool-exec');
-            appendLog(`Status: ${swarmData.status}`, 'info');
+            showDecisionBanner('autonomous', '✅', `Resolved Autonomously → ${swarmData.handoff}`, `Target: ${swarmData.target}`);
+            appendLog(`✅ <b>Autonomous Resolution Complete</b>: ${swarmData.target}`, 'agent-healer');
         } else if (swarmData.handoff === "Human_in_Loop") {
-            appendLog(`👤 <b>Human in the Loop Required!</b>`, 'warning-log');
-            appendLog(`Reason: ${swarmData.target}`, 'warning-log');
-        } else if (swarmData.handoff === "Notification (Code Fix)") {
-            appendLog(`📝 <b>Code Fix Required</b>`, 'info');
-            appendLog(`Target: PR Drafted for team review.`, 'tool-exec');
+            showDecisionBanner('human', '🚨', 'Human in the Loop Required', `Reason: ${swarmData.target}`);
+            appendLog(`🚨 <b>Human Escalation</b>: ${swarmData.target}`, 'warning-log');
+        } else if (swarmData.handoff === "Comms_Lead") {
+            showDecisionBanner('notification', '📢', `Comms Lead Alerted`, `${swarmData.target}`);
+            appendLog(`📢 <b>Comms Lead Notified</b>: ${swarmData.target}`, 'info');
+        } else if (swarmData.handoff === "Resilience_Engineer") {
+            showDecisionBanner('autonomous', '🔄', `Resilience Engineer → Retry Succeeded`, `${swarmData.target}`);
+            appendLog(`🔄 <b>Resilience Engineer</b>: ${swarmData.target}`, 'agent-healer');
         } else {
+            showDecisionBanner('notification', 'ℹ️', swarmData.status, `Handoff: ${swarmData.handoff || 'None'}`);
             appendLog(`Swarm Result: ${swarmData.status}`, 'info');
         }
 

@@ -198,6 +198,67 @@
             70% { box-shadow: 0 0 0 15px rgba(56, 189, 248, 0); }
             100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
         }
+
+        /* Decision Banner */
+        .decision-banner {
+            display: none;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            animation: slideIn 0.5s ease-out forwards;
+            border: 1px solid;
+        }
+        .decision-banner.autonomous {
+            display: block;
+            background: rgba(6, 78, 59, 0.5);
+            border-color: #34d399;
+        }
+        .decision-banner.human {
+            display: block;
+            background: rgba(127, 29, 29, 0.5);
+            border-color: #f87171;
+        }
+        .decision-banner.notification {
+            display: block;
+            background: rgba(15, 23, 42, 0.7);
+            border-color: #818cf8;
+        }
+        .decision-banner .decision-icon {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+        .decision-banner .decision-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .decision-banner .decision-detail {
+            color: #94a3b8;
+            font-size: 0.95em;
+        }
+
+        /* Show Thinking toggle */
+        .console-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .console-controls label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75em;
+            color: #94a3b8;
+            cursor: pointer;
+        }
+        .console-controls input[type="checkbox"] {
+            width: auto;
+        }
+
+        /* Hidden reasoning logs */
+        .log-entry.agent-triage.hidden-reasoning {
+            display: none;
+        }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -289,9 +350,15 @@
                 </button>
             </div>
             
+            <!-- Decision Banner -->
+            <div id="decision-banner" class="decision-banner"></div>
+
             <!-- Swarm Console -->
             <div class="console-box" style="margin-top: 20px;">
-                <div class="console-header">Swarm Orchestrator Logs</div>
+                <div class="console-header console-controls">
+                    <span>Swarm Orchestrator Logs</span>
+                    <label><input type="checkbox" id="show-thinking" checked> Show Thinking</label>
+                </div>
                 <div id="log-container" class="console-body">
                     <div class="info">Awaiting transaction...</div>
                 </div>
