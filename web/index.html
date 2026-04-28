@@ -375,14 +375,22 @@ flowchart TD
     classDef kb fill:#020617,stroke:#10b981,stroke-width:2px,color:#a7f3d0;
     classDef heal fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#fff;
     classDef human fill:#7f1d1d,stroke:#f87171,stroke-width:2px,color:#fff;
+    classDef policy fill:#312e81,stroke:#a78bfa,stroke-width:2px,color:#e0e7ff;
+    classDef compliance fill:#1e1b4b,stroke:#f59e0b,stroke-width:2px,color:#fde68a;
 
-    Start([Incoming Telemetry]):::start --> Triage{Incident_Commander<br/>Agent}:::ai
-    Triage -->|RAG Query| SB[(System & Compliance<br/>Rulebooks)]:::kb
-    SB -.->|OOM_KILL / P99_SPIKE| Healer[Auto_Remediator:<br/>Restart Service]:::heal
-    SB -.->|DEADLOCK| Backoff[Resilience_Engineer:<br/>Exponential Retry]:::ai
-    SB -.->|Weekend or >£5k| HIL[Human_in_Loop:<br/>Architectural Risk]:::human
-    SB -.->|Compliance >£10k| HIL
-    SB -.->|Compliance <=£10k| Notif[Comms_Lead:<br/>FinOps Jira Ticket]:::ai
+    Start(["Incoming Telemetry"]):::start --> TR{"Triage Agent<br/>(Gemini 2.5 Flash)"}:::ai
+    
+    TR -->|"read_runbook"| KB[("Second Brain<br/>Runbooks")]:::kb
+    
+    KB -->|"Weekend"| HIL_WK["Human in Loop:<br/>Defer to Monday"]:::human
+    KB -->|"AML_FLAG"| HIL_AML["Human in Loop:<br/>Compliance Review"]:::human
+    
+    KB -->|"OOM_KILL"| FX["Fixer Agent:<br/>Restart Service"]:::heal
+    KB -->|"P99_SPIKE"| FX
+    
+    FX --> AL["Alerter Agent:<br/>Slack #sre-alerts"]:::ai
+    HIL_WK --> AL
+    HIL_AML --> AL
             </div>
         </div>
     </div>

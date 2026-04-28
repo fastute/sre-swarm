@@ -1,63 +1,50 @@
+// Package main runs a mock payment gateway that simulates transactions
+// and injects failures for the SRE Swarm to triage.
 package main
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
-	"sync"
 	"time"
 )
 
-type Transaction struct {
-	ID        string    `json:"id"`
-	Amount    float64   `json:"amount"`
-	Status    string    `json:"status"`
-	ErrorCode string    `json:"errorCode,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
-}
+// ──────────────────────────────────────────────
+//  Swarm Integration
+// ──────────────────────────────────────────────
 
-var (
-	transactions = make(map[string]*Transaction)
-	mu           sync.Mutex
-)
-
-func sendToSwarm(msg string) {
+// notify forwards a log line to the SRE Swarm's SSE stream.
+func notify(msg string) {
 	body, _ := json.Marshal(map[string]string{"msg": msg})
 	http.Post("http://localhost:9090/api/log-external", "application/json", bytes.NewBuffer(body))
 }
 
-func transactionHandler(w http.ResponseWriter, r *http.Request) {
+// ──────────────────────────────────────────────
+//  Handlers
+// ──────────────────────────────────────────────
+
+// POST /api/transaction — simulate a successful payment
+func handleTransaction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
 		return
 	}
 
 	txID := fmt.Sprintf("TX-%d", rand.Int63())
-	msg := fmt.Sprintf("Processing Transaction %s...", txID)
-	log.Println(msg)
-	sendToSwarm(msg)
+	notify(fmt.Sprintf("Processing %s...", txID))
 
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond) // simulate latency
 
-	// In a real demo, this is where the failure would happen
-	msgDone := fmt.Sprintf("Transaction %s completed successfully", txID)
-	log.Println(msgDone)
-	sendToSwarm(msgDone)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"id":     txID,
-		"status": "success",
-	})
+	notify(fmt.Sprintf("✓ %s completed", txID))
+	respond(w, map[string]string{"id": txID, "status": "success"})
 }
 
-// InjectFailure handler forces a transaction to fail to simulate an incident
-func injectFailureHandler(w http.ResponseWriter, r *http.Request) {
+// POST /api/inject-failure — force a transaction failure to trigger the swarm
+func handleInjectFailure(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -70,67 +57,9 @@ func injectFailureHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	txID := fmt.Sprintf("TX-%d", rand.Int63())
-	msg := fmt.Sprintf("CRITICAL FAILURE: %s in Transaction %s", req.ErrorCode, txID)
-	log.Println(msg)
-	sendToSwarm(msg)
+	notify(fmt.Sprintf("⚠ FAILURE: %s on %s", req.ErrorCode, txID))
 
-	mu.Lock()
-	tx := &Transaction{
-		ID:        txID,
-		Amount:    1000.50,
-		Status:    "FAILED",
-		ErrorCode: req.ErrorCode,
-		CreatedAt: time.Now(),
-	}
-	transactions[tx.ID] = tx
-	mu.Unlock()
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"id":     txID,
-		"status": "error",
-		"error":  req.ErrorCode,
-	})
+	respond(w, map[string]string{"id": txID, "status": "error", "error": req.ErrorCode})
 }
 
-func getStatusHandler(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	var txList []*Transaction
-	for _, tx := range transactions {
-		txList = append(txList, tx)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(txList)
-}
-
-// enableCORS is a simple middleware to allow cross-origin requests from the UI
-func enableCORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		
-		// Handle preflight requests
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		
-		next.ServeHTTP(w, r)
-	})
-}
-
-func main() {
-	mux := http.NewServeMux()
-	
-	mux.HandleFunc("/api/inject-failure", injectFailureHandler)
-	mux.HandleFunc("/api/status", getStatusHandler)
-
-	log.Println("[Mock Payment API] Listening on :8080 (CORS enabled)")
-	if err := http.ListenAndServe(":8080", enableCORS(mux)); err != nil {
-		log.Fatalf("Server failed: %v", err)
-	}
-}
+func main() { run() }

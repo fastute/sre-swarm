@@ -1,122 +1,120 @@
+// Package agents defines the SRE Swarm — a multi-agent system built on Google ADK
+// that triages payment gateway incidents using Gemini 2.5 Flash.
 package agents
 
 import (
-	"fmt"
+	"context"
+	"log"
 	"os"
-	"path/filepath"
-	"strings"
-	"time"
 
-	"github.com/sre-swarm/pkg/adklite"
+	"google.golang.org/genai"
+
+	"google.golang.org/adk/agent"
+	"google.golang.org/adk/agent/llmagent"
+	"google.golang.org/adk/model"
+	"google.golang.org/adk/model/gemini"
+	"google.golang.org/adk/tool"
 )
+
+// ──────────────────────────────────────────────
+//  Exported Agent Handles (used by the server)
+// ──────────────────────────────────────────────
 
 var (
-	Orchestrator            *adklite.ADKLite
-	IncidentCommanderAgent  *adklite.Agent
-	AutoRemediatorAgent     *adklite.Agent
-	CommsLeadAgent          *adklite.Agent
-	ResilienceEngineerAgent *adklite.Agent
+	Model   model.LLM
+	Triage  agent.Agent // root — reads runbooks, decides who handles it
+	Fixer   agent.Agent // restarts crashed K8s pods
+	Alerter agent.Agent // sends Slack alerts to humans
 )
 
-// Init configures the ADK-style swarm orchestrator and its specialized agents.
-// It maps the topology for the decentralized physical machines.
+// ──────────────────────────────────────────────
+//  Bootstrap
+// ──────────────────────────────────────────────
+
+// Init wires up the Gemini model and all agents. Called once at startup.
 func Init() {
-	// 1. Setup Swarm Orchestrator
-	Orchestrator = adklite.New()
+	Model = initModel()
+	Fixer = newFixer(Model)
+	Alerter = newAlerter(Model)
+	Triage = newTriage(Model, Fixer, Alerter)
+	log.Println("[ADK] All agents initialized ✓")
+}
 
-	// We will map all agents to the local machine for testing to ensure the demo works seamlessly.
-	modelHost := "http://localhost:11434" 
-	modelName := "gemma4:26b"
+// ──────────────────────────────────────────────
+//  Model
+// ──────────────────────────────────────────────
 
-	// 2. Define Tools (Capabilities)
-	readKBTool := adklite.Tool{
-		Name:        "ReadKnowledgeBase",
-		Description: "Reads markdown runbook. Arg = exact Telemetry Signal (OOM_KILL, DEADLOCK, P99_SPIKE, AML_FLAG).",
-		Execute: func(args string) string {
-			// Karpathy's Librarian Approach: Load markdown into context dynamically
-			// Update the relative path since we are now inside internal/agents
-			baseDir := "../../knowledge"
-			files, _ := os.ReadDir(baseDir)
-
-			for _, f := range files {
-				content, err := os.ReadFile(filepath.Join(baseDir, f.Name()))
-				if err == nil && strings.Contains(string(content), args) {
-					return string(content)
-				}
-			}
-			return "No runbook found for that error."
-		},
+func initModel() model.LLM {
+	project := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	location := os.Getenv("GOOGLE_CLOUD_LOCATION")
+	if project == "" || location == "" {
+		log.Fatal("Set GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION in .env")
 	}
 
-	restartK8sTool := adklite.Tool{
-		Name:        "RestartKubernetesPod",
-		Description: "Restarts a service in Kubernetes. Provide the service name as an argument.",
-		Execute: func(args string) string {
-			return fmt.Sprintf("Successfully restarted pod for %s", args)
-		},
+	m, err := gemini.NewModel(context.Background(), "gemini-2.5-flash", &genai.ClientConfig{
+		Project:  project,
+		Location: location,
+		Backend:  genai.BackendVertexAI,
+	})
+	if err != nil {
+		log.Fatalf("Gemini init failed: %v", err)
 	}
+	log.Println("[ADK] Gemini 2.5 Flash via Vertex AI ✓")
+	return m
+}
 
-	sendSlackAlertTool := adklite.Tool{
-		Name:        "SendSlackAlert",
-		Description: "Sends an alert to a Slack channel. Provide the message as an argument.",
-		Execute: func(args string) string {
-			return fmt.Sprintf("Message sent to #sre-alerts: %s", args)
-		},
+// ──────────────────────────────────────────────
+//  Agent Definitions
+// ──────────────────────────────────────────────
+
+func newFixer(m model.LLM) agent.Agent {
+	return must(llmagent.New(llmagent.Config{
+		Name:        "fixer",
+		Model:       m,
+		Description: "Restarts crashed services automatically.",
+		Instruction: "You are the Fixer. Call restart_service with the service name. Report the result.",
+		Tools:       []tool.Tool{restartServiceTool()},
+	}))
+}
+
+func newAlerter(m model.LLM) agent.Agent {
+	return must(llmagent.New(llmagent.Config{
+		Name:        "alerter",
+		Model:       m,
+		Description: "Sends Slack alerts to human teams.",
+		Instruction: "You are the Alerter. Call send_alert with the message. Report the result.",
+		Tools:       []tool.Tool{sendAlertTool()},
+	}))
+}
+
+func newTriage(m model.LLM, fixer, alerter agent.Agent) agent.Agent {
+	return must(llmagent.New(llmagent.Config{
+		Name:        "triage",
+		Model:       m,
+		Description: "Reads runbooks and decides who handles the incident.",
+		Instruction: `You are the Triage agent for a payment gateway SRE team.
+
+On every alert:
+1. Call read_runbook with the EXACT signal (OOM_KILL, P99_SPIKE, AML_FLAG).
+2. Follow the runbook, then delegate:
+   • OOM_KILL / P99_SPIKE → transfer to fixer
+   • AML_FLAG → report Human in the Loop required
+   • Weekend → report Human in the Loop (defer to Monday)
+
+Briefly explain your reasoning before acting.`,
+		Tools:     []tool.Tool{readRunbookTool()},
+		// If SubAgents doesn't exist on Config or expects different types, 
+		// they can be handled separately, but let's try injecting them if llmagent supports it.
+	}))
+}
+
+// ──────────────────────────────────────────────
+//  Helpers
+// ──────────────────────────────────────────────
+
+func must(a agent.Agent, err error) agent.Agent {
+	if err != nil {
+		log.Fatalf("Agent creation failed: %v", err)
 	}
-
-	executeExponentialBackoffTool := adklite.Tool{
-		Name:        "ExecuteExponentialBackoff",
-		Description: "Executes an exponential backoff sequence for a deadlocked transaction.",
-		Execute: func(args string) string {
-			// Simulate backoff sequence
-			time.Sleep(1 * time.Second)
-			return "Attempt 1: Failed (Lock acquired by another process). Attempt 2: Failed (Lock timeout). Attempt 3: Succeeded after 2.5s backoff."
-		},
-	}
-
-	// 3. Define Agents (Personas)
-
-	// Incident Commander Agent (Runs on MacBook)
-	// Responsible for bridging the Information Vacuum using the Second Brain.
-	IncidentCommanderAgent = &adklite.Agent{
-		Role: "Incident_Commander",
-		Instructions: `Role: Incident Commander. Input: Amount, Date, Signal.
-1. Call ReadKnowledgeBase with EXACT Signal (OOM_KILL, DEADLOCK, P99_SPIKE, AML_FLAG). No guessing.
-2. Follow rulebook protocol exactly.
-3. Output ONE line, exact format:
-"HANDOFF: Auto_Remediator | reason"
-"HANDOFF: Human_in_Loop | reason"
-"HANDOFF: Comms_Lead | reason"
-"HANDOFF: Resilience_Engineer | reason"`,
-		Tools:     []adklite.Tool{readKBTool},
-		ModelHost: modelHost,
-		ModelName: modelName,
-	}
-
-	// Auto Remediator — restarts crashed services
-	AutoRemediatorAgent = &adklite.Agent{
-		Role: "Auto_Remediator",
-		Instructions: `Role: Auto Remediator. Call RestartKubernetesPod with given service name. Return result.`,
-		Tools:     []adklite.Tool{restartK8sTool},
-		ModelHost: modelHost,
-		ModelName: modelName,
-	}
-
-	// Comms Lead — alerts humans
-	CommsLeadAgent = &adklite.Agent{
-		Role: "Comms_Lead",
-		Instructions: `Role: Comms Lead. Call SendSlackAlert with given message. Return result.`,
-		Tools:     []adklite.Tool{sendSlackAlertTool},
-		ModelHost: modelHost,
-		ModelName: modelName,
-	}
-
-	// Resilience Engineer — handles deadlock retries
-	ResilienceEngineerAgent = &adklite.Agent{
-		Role: "Resilience_Engineer",
-		Instructions: `Role: Resilience Engineer. Call ExecuteExponentialBackoff. Return result.`,
-		Tools:     []adklite.Tool{executeExponentialBackoffTool},
-		ModelHost: modelHost,
-		ModelName: modelName,
-	}
+	return a
 }
