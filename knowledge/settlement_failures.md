@@ -1,4 +1,5 @@
 # Knowledge Base: System Failures Rulebook
+
 (KB-SRE-001)
 
 The `settlement-worker` and `api-gateway` are high-criticality systems.
@@ -6,6 +7,7 @@ The `settlement-worker` and `api-gateway` are high-criticality systems.
 ## Resolution Matrix
 
 ### Scenario 1: Memory Leak / OOM Kill (Autonomous)
+
 - **Symptom:** Telemetry Signal is `OOM_KILL`.
 - **Action Required:** Auto-Remediation.
 - **Protocol:**
@@ -13,6 +15,7 @@ The `settlement-worker` and `api-gateway` are high-criticality systems.
   2. Instruction: `HANDOFF: Auto_Remediator | settlement-worker`
 
 ### Scenario 2: Ledger Deadlock (Architectural Risk)
+
 - **Symptom:** Telemetry Signal is `DEADLOCK`.
 - **Action Required:** Exponential Backoff & Retry.
 - **Protocol:**
@@ -21,6 +24,7 @@ The `settlement-worker` and `api-gateway` are high-criticality systems.
   3. Instruction: `HANDOFF: Resilience_Engineer | Initiate Exponential Backoff`
 
 ### Scenario 3: P99 Latency Spike
+
 - **Symptom:** Telemetry Signal is `P99_SPIKE`.
 - **Action Required:** Auto-Remediation.
 - **Protocol:**
@@ -28,7 +32,8 @@ The `settlement-worker` and `api-gateway` are high-criticality systems.
   2. Instruction: `HANDOFF: Auto_Remediator | api-gateway`
 
 ### Global Override Policies
+
 - **Weekend Policy:** If the `Payment Date` is Saturday or Sunday, defer processing to the next business day (Monday). Phone the human agent for resolution.
   - **Instruction:** `HANDOFF: Human_in_Loop | Weekend Guardrail (Deferred to Monday)`
-- **High Value Policy:** If the payment amount is > £5,000 GBP, the human agent MUST be notified.
-  - **Instruction:** `HANDOFF: Comms_Lead | High Value Payment > £5,000 GBP`
+- **High Value Policy:** If the payment amount is > £5000 GBP, the human agent MUST be notified.
+  - **Instruction:** `HANDOFF: Comms_Lead | High Value Payment > £5000 GBP`

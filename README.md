@@ -23,23 +23,25 @@ Powered by Google ADK's `llmagent` framework, each agent is a specialist:
 When an alert triggers, the **Triage** agent consults the "Second Brain" and routes the incident:
  
 ```mermaid
-flowchart TD
-    classDef start fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#fff;
-    classDef ai fill:#0f172a,stroke:#818cf8,stroke-width:2px,color:#bae6fd;
-    classDef kb fill:#020617,stroke:#10b981,stroke-width:2px,color:#a7f3d0;
-    classDef heal fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#fff;
-    classDef human fill:#7f1d1d,stroke:#f87171,stroke-width:2px,color:#fff;
+flowchart LR
+    classDef start fill:#e0f2fe,stroke:#0284c7,stroke-width:3px,color:#0f172a,font-weight:bold;
+    classDef ai fill:#f3e8ff,stroke:#9333ea,stroke-width:3px,color:#0f172a,font-weight:bold;
+    classDef kb fill:#cffafe,stroke:#0891b2,stroke-width:3px,color:#0f172a,font-weight:bold;
+    classDef heal fill:#d1fae5,stroke:#059669,stroke-width:3px,color:#0f172a,font-weight:bold;
+    classDef human fill:#ffe4e6,stroke:#e11d48,stroke-width:3px,color:#0f172a,font-weight:bold;
+    classDef note fill:#fffbeb,stroke:#f59e0b,stroke-width:2px,color:#92400e,stroke-dasharray: 5 5,font-weight:bold;
 
-    Start(["Incoming Telemetry"]):::start --> TR{"Triage Agent<br/>(Gemini 2.5 Flash)"}:::ai
+    Start(["Incoming Telemetry"]):::start --> TR{"Triage Agent<br>(Gemini 2.5 Flash)"}:::ai
     
-    TR -->|"read_runbook"| KB[("Second Brain<br/>Runbooks")]:::kb
+    TR -->|"Consults"| KB[("Second Brain<br>(Policies)")]:::kb
     
-    KB -->|"Weekend / AML"| HIL["Human in Loop:<br/>Compliance/Review"]:::human
-    KB -->|"OOM_KILL / P99"| FX["Fixer Agent:<br/>Restart Service"]:::heal
-    
-    FX --> AL["Alerter Agent:<br/>Slack #sre-alerts"]:::ai
-    HIL --> AL
+    KB -->|"Technical Alert"| FX["Fixer Agent<br>(Auto-Remediate)"]:::heal
+    KB -->|"Policy Breach"| HIL["Human in Loop<br>(Halt & Escalate)"]:::human
 ```
+
+**📝 Global Policy Overrides**
+- **High-Value Payments:** Amounts > £5,000 force an immediate human escalation.
+- **Weekend Guardrail:** Weekend payments are automatically deferred to Monday.
  
 ---
  

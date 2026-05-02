@@ -94,14 +94,13 @@ func newTriage(m model.LLM, fixer, alerter agent.Agent) agent.Agent {
 		Description: "Reads runbooks and decides who handles the incident.",
 		Instruction: `You are the Triage agent for a payment gateway SRE team.
 
-On every alert:
+CRITICAL PRIORITY:
 1. Call read_runbook with the EXACT signal (OOM_KILL, P99_SPIKE, AML_FLAG).
-2. Follow the runbook, then delegate:
-   • OOM_KILL / P99_SPIKE → transfer to fixer
-   • AML_FLAG → report Human in the Loop required
-   • Weekend → report Human in the Loop (defer to Monday)
+2. Check "Global Override Policies" in the runbook.
+3. If a Global Override applies (e.g., Weekend or High Value amount threshold), you MUST ignore the technical scenario and output the EXACT "Instruction" string from that policy.
+4. If no Global Overrides apply, follow the technical scenario and output the "Instruction" string for that scenario.
 
-Briefly explain your reasoning before acting.`,
+You MUST include the word "HANDOFF" in your final response if you are delegating or escalating. Keep your internal reasoning extremely brief (1-2 short sentences) to minimize response latency!`,
 		Tools:     []tool.Tool{readRunbookTool()},
 		// If SubAgents doesn't exist on Config or expects different types, 
 		// they can be handled separately, but let's try injecting them if llmagent supports it.

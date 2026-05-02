@@ -60,14 +60,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Set default date to today and disallow past dates
-    const dateInput = document.getElementById('tx-date');
-    if (dateInput) {
-        const today = new Date().toISOString().split('T')[0];
-        dateInput.value = today;
-        dateInput.min = today;
-    }
+    updateScenario(); // Initialize the hidden inputs
 });
+
+function getNextWeekday() {
+    const d = new Date();
+    d.setDate(d.getDate() + ((3 + 7 - d.getDay()) % 7 || 7)); // Next Wednesday
+    return d.toISOString().split('T')[0];
+}
+
+function getNextWeekend() {
+    const d = new Date();
+    d.setDate(d.getDate() + ((6 + 7 - d.getDay()) % 7 || 7)); // Next Saturday
+    return d.toISOString().split('T')[0];
+}
+
+function updateScenario() {
+    const scenario = document.getElementById('demo-scenario').value;
+    const amountInput = document.getElementById('tx-amount');
+    const dateInput = document.getElementById('tx-date');
+    const signalInput = document.getElementById('tx-signal');
+    const simulateBtn = document.getElementById('simulate-btn');
+    const cueBox = document.getElementById('presentation-cue');
+
+    if (!scenario) {
+        if (simulateBtn) simulateBtn.disabled = true;
+        if (cueBox) cueBox.style.display = 'none';
+        return;
+    }
+
+    if (simulateBtn) simulateBtn.disabled = false;
+    if (cueBox) cueBox.style.display = 'block';
+
+    if (scenario === "1") {
+        amountInput.value = "250";
+        dateInput.value = getNextWeekday();
+        signalInput.value = "OOM_KILL";
+        if (cueBox) cueBox.innerHTML = "💡 Watch the agent autonomously diagnose and fix a routine OOM Kill without human intervention.";
+    } else if (scenario === "2") {
+        amountInput.value = "12500";
+        dateInput.value = getNextWeekday();
+        signalInput.value = "OOM_KILL"; 
+        if (cueBox) cueBox.innerHTML = "💡 Now a £12,500 payment fails. The agent reads the High-Value policy and overrides auto-remediation to escalate!";
+    } else if (scenario === "3") {
+        amountInput.value = "250";
+        dateInput.value = getNextWeekend();
+        signalInput.value = "OOM_KILL"; 
+        if (cueBox) cueBox.innerHTML = "💡 It's the weekend. The agent detects the Weekend Guardrail policy and defers processing until Monday.";
+    }
+}
 
 let isSwarmActive = false;
 

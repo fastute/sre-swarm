@@ -51,12 +51,14 @@ func handleSimulate(w http.ResponseWriter, r *http.Request) {
 	log.Printf("\n══ SWARM TRIGGERED ══ £%.2f | %s | %s", req.Amount, req.Date, req.Signal)
 	broadcast("Incident Commander is analyzing...")
 
-	// Build prompt
+	// Build prompt with day-of-week awareness
 	ctx := context.Background()
-	now := time.Now().Format("Monday, 15:04:05")
+	txTime, _ := time.Parse("2006-01-02", req.Date)
+	dayOfWeek := txTime.Format("Monday")
+
 	prompt := fmt.Sprintf(
-		"Transaction £%.2f GBP on %s (System Time: %s). Signal: %s. Investigate and resolve per SRE policy.",
-		req.Amount, req.Date, now, req.Signal,
+		"ALERT: %s | AMOUNT: £%.2f | PAYMENT DATE: %s (%s). Determine resolution per runbook.",
+		req.Signal, req.Amount, req.Date, dayOfWeek,
 	)
 
 	// Create session service + session
@@ -126,7 +128,13 @@ func handleSimulate(w http.ResponseWriter, r *http.Request) {
 					res.Handoff, res.Target, res.IsAutonomous = "Alerter", text, false
 				default:
 					if isHumanLoop(text) {
-						res.Handoff, res.Target, res.IsAutonomous = "Human_in_Loop", text, false
+						reason := text
+						if idx := strings.Index(text, "|"); idx != -1 {
+							reason = strings.TrimSpace(text[idx+1:])
+						} else if idx := strings.Index(text, ":"); idx != -1 {
+							reason = strings.TrimSpace(text[idx+1:])
+						}
+						res.Handoff, res.Target, res.IsAutonomous = "Human_in_Loop", reason, false
 					}
 				}
 			case part.FunctionCall != nil:
@@ -185,7 +193,12 @@ func handleExternalLog(w http.ResponseWriter, r *http.Request) {
 
 func isHumanLoop(text string) bool {
 	lower := strings.ToLower(text)
-	for _, kw := range []string{"human in the loop", "compliance review", "defer to monday"} {
+	keywords := []string{
+		"handoff: human_in_loop",
+		"handoff: comms_lead",
+		"handoff: alerter",
+	}
+	for _, kw := range keywords {
 		if strings.Contains(lower, kw) {
 			return true
 		}

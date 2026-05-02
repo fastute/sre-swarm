@@ -3,33 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Autonomous SRE Swarm</title>
+    <title>Autonomous Payments SRE</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Fira+Code:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Fira+Code:wght@400;500;700&display=swap');
         
-        body { 
-            font-family: 'Outfit', sans-serif; 
-            background: radial-gradient(circle at top right, #0f172a, #020617); 
-            color: #f8fafc; 
-            margin: 0; 
-            padding: 30px; 
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            background-color: #f8fafc;
+            color: #0f172a;
+            margin: 0;
+            padding: 20px; 
             min-height: 100vh;
+            line-height: 1.6;
         }
         .container { 
-            max-width: 1600px; 
+            max-width: 1800px; 
             margin: 0 auto; 
             display: grid; 
-            grid-template-columns: 1fr 2fr; 
-            gap: 30px; 
+            grid-template-columns: 40% 60%; 
+            gap: 20px; 
         }
         .panel { 
-            background: rgba(30, 41, 59, 0.4); 
+            background: rgba(255, 255, 255, 0.85); 
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 25px; 
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 20px; 
             border-radius: 16px; 
-            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5); 
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1); 
             animation: fadeIn 0.8s ease-out forwards;
         }
         .button-grid {
@@ -37,10 +43,14 @@
             grid-template-columns: 1fr;
             gap: 10px;
         }
-        h1, h2 { 
-            color: #38bdf8; 
+        h2 { 
             margin-top: 0; 
-            font-weight: 600;
+            margin-bottom: 15px;
+            color: #0f172a; 
+            border-bottom: 2px solid #e2e8f0; 
+            padding-bottom: 10px; 
+            font-size: 2.2em;
+            font-weight: 800;
             letter-spacing: -0.5px;
         }
         
@@ -48,13 +58,14 @@
             background: linear-gradient(135deg, #0284c7, #0369a1); 
             color: white; 
             border: 1px solid rgba(255,255,255,0.1); 
-            padding: 12px 20px; 
+            padding: 18px 20px; 
             margin: 8px 0; 
             border-radius: 8px; 
             cursor: pointer; 
             width: 100%; 
-            font-weight: 600; 
+            font-weight: 700; 
             font-family: 'Outfit', sans-serif;
+            font-size: 1.2em;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
             position: relative;
@@ -86,71 +97,101 @@
             height: 700px; 
             overflow-y: auto; 
             font-family: 'Fira Code', monospace; 
-            background: rgba(2, 6, 23, 0.7); 
+            background: #f1f5f9; 
             padding: 20px; 
             border-radius: 12px; 
-            border: 1px solid rgba(56, 189, 248, 0.1); 
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            border: 1px solid #cbd5e1; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
             scroll-behavior: smooth;
         }
         
         /* Custom Scrollbar */
         #log-container::-webkit-scrollbar { width: 8px; }
         #log-container::-webkit-scrollbar-track { background: transparent; }
-        #log-container::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        #log-container::-webkit-scrollbar-thumb:hover { background: #475569; }
+        #log-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        #log-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
         .log-entry { 
             margin-bottom: 12px; 
             line-height: 1.5; 
-            font-size: 0.9em;
+            font-size: 1.15em;
+            font-weight: 500;
             opacity: 0;
             transform: translateX(-10px);
             animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
             padding: 8px 12px;
             border-radius: 6px;
-            background: rgba(255, 255, 255, 0.02);
+            background: #ffffff;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             border-left: 3px solid transparent;
+            color: #334155;
         }
         
         @keyframes slideIn {
             to { opacity: 1; transform: translateX(0); }
         }
         .transaction-form {
-            background: rgba(255, 255, 255, 0.05);
+            background: #f8fafc;
             padding: 20px;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid #e2e8f0;
         }
         .form-group {
             margin-bottom: 20px;
         }
         .form-group label {
             display: block;
-            margin-bottom: 8px;
-            color: #94a3b8;
-            font-size: 0.9em;
+            margin-bottom: 10px;
+            color: #334155;
+            font-weight: 700;
+            font-size: 1.2em;
+            letter-spacing: -0.3px;
         }
-        .form-group input {
+        .form-group select {
             width: 100%;
-            padding: 12px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            color: white;
-            font-size: 1em;
+            padding: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1.25em;
+            background-color: #fff;
+            color: #0f172a;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            box-sizing: border-box;
+            cursor: pointer;
         }
         .pulse-button {
             width: 100%;
-            padding: 15px;
+            padding: 18px;
             background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
             color: white;
             border: none;
             border-radius: 8px;
-            font-weight: 600;
+            font-size: 1.3em;
+            font-weight: 800;
+            letter-spacing: 0.5px;
             cursor: pointer;
             box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4);
             animation: pulse 2s infinite;
+            transition: all 0.3s;
+        }
+        .pulse-button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            box-shadow: none;
+            animation: none;
+            opacity: 0.7;
+        }
+        .presentation-cue {
+            margin-top: 15px;
+            padding: 12px 15px;
+            background: #eef2ff;
+            border-left: 4px solid #4f46e5;
+            color: #3730a3;
+            font-size: 1.1em;
+            font-weight: 600;
+            border-radius: 6px;
+            animation: fadeIn 0.3s;
         }
         .intro-section {
             text-align: center;
@@ -165,33 +206,42 @@
             margin-bottom: 10px;
         }
         .intro-section p {
-            color: #94a3b8;
+            color: #475569;
             font-size: 1.2em;
             max-width: 800px;
             margin: 0 auto;
         }
         .console-box {
-            background: rgba(0, 0, 0, 0.4);
+            background: #ffffff;
             border-radius: 12px;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
         .console-header {
-            background: rgba(56, 189, 248, 0.2);
-            padding: 8px 15px;
-            font-size: 0.8em;
-            font-weight: 600;
-            color: #38bdf8;
+            background: #e0f2fe;
+            padding: 12px 18px;
+            font-size: 0.95em;
+            font-weight: 700;
+            color: #0284c7;
             text-transform: uppercase;
             letter-spacing: 1px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid #bae6fd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .console-header span {
+            font-weight: 800;
+            font-size: 1.3em;
         }
         .console-body {
-            height: 350px;
+            height: 230px;
             overflow-y: auto;
             padding: 15px;
             font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9em;
+            font-size: 1.15em;
+            font-weight: 700;
         }
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4); }
@@ -210,31 +260,36 @@
         }
         .decision-banner.autonomous {
             display: block;
-            background: rgba(6, 78, 59, 0.5);
-            border-color: #34d399;
+            background: #d1fae5;
+            border-color: #10b981;
+            color: #065f46;
         }
         .decision-banner.human {
             display: block;
-            background: rgba(127, 29, 29, 0.5);
-            border-color: #f87171;
+            background: #fee2e2;
+            border-color: #ef4444;
+            color: #991b1b;
         }
         .decision-banner.notification {
             display: block;
-            background: rgba(15, 23, 42, 0.7);
-            border-color: #818cf8;
+            background: #e0e7ff;
+            border-color: #6366f1;
+            color: #3730a3;
         }
         .decision-banner .decision-icon {
             font-size: 1.8em;
             margin-bottom: 8px;
         }
         .decision-banner .decision-title {
-            font-size: 1.2em;
-            font-weight: 600;
-            margin-bottom: 4px;
+            font-size: 1.4em;
+            font-weight: 700;
+            margin-bottom: 6px;
         }
         .decision-banner .decision-detail {
-            color: #94a3b8;
-            font-size: 0.95em;
+            color: inherit;
+            opacity: 0.85;
+            font-size: 1.1em;
+            font-weight: 500;
         }
 
         /* Show Thinking toggle */
@@ -246,13 +301,14 @@
         .console-controls label {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.75em;
-            color: #94a3b8;
+            gap: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #475569;
             cursor: pointer;
         }
         .console-controls input[type="checkbox"] {
-            width: auto;
+            transform: scale(1.2);
         }
 
         /* Hidden reasoning logs */
@@ -264,31 +320,20 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .agent-triage { color: #c084fc; border-left-color: #c084fc; background: rgba(192, 132, 252, 0.05); }
-        .agent-healer { color: #4ade80; border-left-color: #4ade80; background: rgba(74, 222, 128, 0.05); }
-        .tool-exec { color: #facc15; border-left-color: #facc15; background: rgba(250, 204, 21, 0.05); }
-        .info { color: #94a3b8; }
-        .danger-log { color: #f87171; border-left-color: #f87171; }
-        .subtitle {
-            color: #94a3b8;
-            font-size: 1.2em;
-            margin-top: -5px;
-            margin-bottom: 25px;
+        .agent-triage { color: #7e22ce; border-left-color: #a855f7; background: #faf5ff; }
+        .agent-healer { color: #15803d; border-left-color: #22c55e; background: #f0fdf4; }
+        .tool-exec { color: #b45309; border-left-color: #eab308; background: #fefce8; }
+        .info { color: #64748b; }
+        .danger-log { color: #b91c1c; border-left-color: #ef4444; background: #fef2f2; }
+        
+        .policy-overrides {
+            font-size: 1.1em;
         }
-        .features-grid {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
+        .policy-overrides h3 {
+            font-size: 1.4em;
         }
-        .feature-badge {
-            background: rgba(56, 189, 248, 0.1);
-            border: 1px solid rgba(56, 189, 248, 0.3);
-            color: #bae6fd;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: 500;
+        .policy-overrides li {
+            margin-bottom: 10px;
         }
         
         /* Mermaid Diagram Enhancements */
@@ -296,11 +341,11 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 500px;
-            background: rgba(0, 0, 0, 0.3);
+            min-height: 400px;
+            background: #f8fafc;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 30px;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
         }
         .mermaid svg {
             max-width: 100% !important;
@@ -309,92 +354,98 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script>mermaid.initialize({startOnLoad:true, theme: 'dark', flowchart: { curve: 'basis' }});</script>
+    <script>
+        mermaid.initialize({
+            startOnLoad:true, 
+            theme: 'default', 
+            flowchart: { curve: 'basis' },
+            themeVariables: {
+                fontFamily: 'Outfit, sans-serif',
+                fontSize: '18px',
+                nodeBorder: '3px',
+                primaryTextColor: '#0f172a'
+            }
+        });
+    </script>
 </head>
 <body>
-    <div class="intro-section">
-        <h1>Autonomous SRE Swarm</h1>
-        <p class="subtitle">Mission-Critical Payment Gateway Resolution Platform</p>
-        <div class="features-grid">
-            <div class="feature-badge">⚡️ Autonomous Discovery</div>
-            <div class="feature-badge">🧠 Policy-Grounded (Second Brain)</div>
-            <div class="feature-badge">🛡️ High-Value SLA Enforcement</div>
-        </div>
-    </div>
+
 
     <div class="container">
-        <!-- Controls Panel -->
-        <div class="panel">
-            <h2>Transaction Injector</h2>
-            <div class="transaction-form">
-                <div class="form-group">
-                    <label>Transaction Amount (£ GBP)</label>
-                    <input type="number" id="tx-amount" value="12500" placeholder="Enter amount...">
-                </div>
-                <div class="form-group">
-                    <label>Execution Date</label>
-                    <input type="date" id="tx-date">
-                </div>
-                <div class="form-group">
-                    <label>Primary Telemetry Signal (Narrative Control)</label>
-                    <select id="tx-signal" style="width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: white; margin-top: 10px; cursor: pointer;">
-                        <option value="OOM_KILL">Alert: OOMKilled (System Failure)</option>
-                        <option value="DEADLOCK">Alert: MySQL Deadlock (System Failure)</option>
-                        <option value="P99_SPIKE">Alert: P99 Latency Spike (System Failure)</option>
-                        <option value="AML_FLAG">Alert: AML Sanctions Match (Compliance)</option>
-                    </select>
+        <!-- Controls & Logs Panel (Left Column) -->
+        <div class="left-column">
+            <div class="panel">
+                <h2>Payment Scenario</h2>
+                <div class="transaction-form">
+                    <div class="form-group">
+                        <select id="demo-scenario" onchange="updateScenario()">
+                            <option value="" disabled selected>-- Select Scenario Flow --</option>
+                            <option value="1">1. Weekday Low-Value (Auto)</option>
+                            <option value="2">2. Weekday High-Value (Escalate)</option>
+                            <option value="3">3. Weekend Low-Value (Defer)</option>
+                        </select>
+                    </div>
+                    <div id="presentation-cue" class="presentation-cue" style="display: none;"></div>
+                    <!-- Hidden inputs to maintain payload structure -->
+                    <input type="hidden" id="tx-amount" value="">
+                    <input type="hidden" id="tx-date" value="">
+                    <input type="hidden" id="tx-signal" value="">
+                    
+                    <button id="simulate-btn" class="pulse-button" onclick="initiateAutonomousSwarm()" disabled>
+                        Simulate Payment Failure
+                    </button>
                 </div>
                 
-                <button class="pulse-button" onclick="initiateAutonomousSwarm()">
-                    Initiate Autonomous Swarm
-                </button>
+                <!-- Decision Banner -->
+                <div id="decision-banner" class="decision-banner"></div>
             </div>
-            
-            <!-- Decision Banner -->
-            <div id="decision-banner" class="decision-banner"></div>
 
             <!-- Swarm Console -->
-            <div class="console-box" style="margin-top: 20px;">
-                <div class="console-header console-controls">
-                    <span>Swarm Orchestrator Logs</span>
-                    <label><input type="checkbox" id="show-thinking" checked> Show Thinking</label>
-                </div>
-                <div id="log-container" class="console-body">
-                    <div class="info">Awaiting transaction...</div>
+            <div class="panel" style="margin-top: 10px; padding: 0; overflow: hidden;">
+                <div class="console-box">
+                    <div class="console-header console-controls">
+                        <span>Payment SRE Logs</span>
+                        <label><input type="checkbox" id="show-thinking" checked> Show Thinking</label>
+                    </div>
+                    <div id="log-container" class="console-body">
+                        <div class="info">Awaiting transaction...</div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Right Panel: Diagram -->
         <div class="panel">
-            <h2>Swarm Decision Logic (Second Brain Rules)</h2>
+            <h2>Intelligent Payment Triage Mesh</h2>
             <div class="mermaid">
-flowchart TD
-    classDef start fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#fff;
-    classDef ai fill:#0f172a,stroke:#818cf8,stroke-width:2px,color:#bae6fd;
-    classDef kb fill:#020617,stroke:#10b981,stroke-width:2px,color:#a7f3d0;
-    classDef heal fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#fff;
-    classDef human fill:#7f1d1d,stroke:#f87171,stroke-width:2px,color:#fff;
-    classDef policy fill:#312e81,stroke:#a78bfa,stroke-width:2px,color:#e0e7ff;
-    classDef compliance fill:#1e1b4b,stroke:#f59e0b,stroke-width:2px,color:#fde68a;
+flowchart LR
+    classDef start fill:#e0f2fe,stroke:#0284c7,stroke-width:3px,color:#0f172a,font-weight:bold;
+    classDef ai fill:#f3e8ff,stroke:#9333ea,stroke-width:3px,color:#0f172a,font-weight:bold;
+    classDef kb fill:#cffafe,stroke:#0891b2,stroke-width:3px,color:#0f172a,font-weight:bold;
+    classDef heal fill:#d1fae5,stroke:#059669,stroke-width:3px,color:#0f172a,font-weight:bold;
+    classDef human fill:#ffe4e6,stroke:#e11d48,stroke-width:3px,color:#0f172a,font-weight:bold;
+    classDef note fill:#fffbeb,stroke:#f59e0b,stroke-width:2px,color:#92400e,stroke-dasharray: 5 5,font-weight:bold;
 
-    Start(["Incoming Telemetry"]):::start --> TR{"Triage Agent<br/>(Gemini 2.5 Flash)"}:::ai
+    Start(["Incoming Payment Alert"]):::start --> TR{"Orchestrator<br>(Gemini)"}:::ai
     
-    TR -->|"read_runbook"| KB[("Second Brain<br/>Runbooks")]:::kb
+    TR -->|"Consults"| KB[("Policy Engine<br>(Second Brain)")]:::kb
     
-    KB -->|"Weekend"| HIL_WK["Human in Loop:<br/>Defer to Monday"]:::human
-    KB -->|"AML_FLAG"| HIL_AML["Human in Loop:<br/>Compliance Review"]:::human
-    
-    KB -->|"OOM_KILL"| FX["Fixer Agent:<br/>Restart Service"]:::heal
-    KB -->|"P99_SPIKE"| FX
-    
-    FX --> AL["Alerter Agent:<br/>Slack #sre-alerts"]:::ai
-    HIL_WK --> AL
-    HIL_AML --> AL
+    KB -->|"System Failure"| FX["Auto-Remediator<br>(Fix & Proceed)"]:::heal
+    KB -->|"Risk/Policy Breach"| HIL["Human in Loop<br>(Halt & Escalate)"]:::human
+            </div>
+            
+            <div class="policy-overrides">
+                <h3>📝 Global Policy Overrides</h3>
+                <ul>
+                    <li><strong>High-Value Payments:</strong> Amounts > £5,000 force an immediate human escalation.</li>
+                    <li><strong>Weekend Guardrail:</strong> Weekend payments are automatically deferred to Monday.</li>
+                </ul>
             </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
+
+
+    <script src="app.js?v=5"></script>
 </body>
 </html>
