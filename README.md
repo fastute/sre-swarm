@@ -24,19 +24,22 @@ When an alert triggers, the **Triage** agent consults the "Second Brain" and rou
  
 ```mermaid
 flowchart LR
-    classDef start fill:#e0f2fe,stroke:#0284c7,stroke-width:3px,color:#0f172a,font-weight:bold;
-    classDef ai fill:#f3e8ff,stroke:#9333ea,stroke-width:3px,color:#0f172a,font-weight:bold;
-    classDef kb fill:#cffafe,stroke:#0891b2,stroke-width:3px,color:#0f172a,font-weight:bold;
-    classDef heal fill:#d1fae5,stroke:#059669,stroke-width:3px,color:#0f172a,font-weight:bold;
-    classDef human fill:#ffe4e6,stroke:#e11d48,stroke-width:3px,color:#0f172a,font-weight:bold;
-    classDef note fill:#fffbeb,stroke:#f59e0b,stroke-width:2px,color:#92400e,stroke-dasharray: 5 5,font-weight:bold;
+    Start(["Incoming Telemetry"]) --> TR{"Triage Agent (Gemini)"}
+    TR -->|"Consults"| KB[("Second Brain (Policies)")]
+    KB -->|"Technical Alert"| FX["Fixer Agent (Auto-Remediate)"]
+    KB -->|"Policy Breach"| HIL["Human in Loop (Halt & Escalate)"]
+    
+    classDef start fill:#e0f2fe,stroke:#0284c7,stroke-width:3px,color:#0f172a;
+    classDef ai fill:#f3e8ff,stroke:#9333ea,stroke-width:3px,color:#0f172a;
+    classDef kb fill:#cffafe,stroke:#0891b2,stroke-width:3px,color:#0f172a;
+    classDef heal fill:#d1fae5,stroke:#059669,stroke-width:3px,color:#0f172a;
+    classDef human fill:#ffe4e6,stroke:#e11d48,stroke-width:3px,color:#0f172a;
 
-    Start(["Incoming Telemetry"]):::start --> TR{"Triage Agent<br>(Gemini 2.5 Flash)"}:::ai
-    
-    TR -->|"Consults"| KB[("Second Brain<br>(Policies)")]:::kb
-    
-    KB -->|"Technical Alert"| FX["Fixer Agent<br>(Auto-Remediate)"]:::heal
-    KB -->|"Policy Breach"| HIL["Human in Loop<br>(Halt & Escalate)"]:::human
+    class Start start;
+    class TR ai;
+    class KB kb;
+    class FX heal;
+    class HIL human;
 ```
 
 **📝 Global Policy Overrides**
